@@ -981,6 +981,14 @@ jobs:
           check_rejects .
 
       # OGKI转换GKI，无需修改 dtbo 开机
+      - name: Fix SukiSU sulog user_arg_ptr
+        run: |
+          set -e
+          cd kernel_workspace
+          for f in $(find . -path "*/drivers/kernelsu/sulog/event.c" -type f); do
+            echo "Patching $f"
+            sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' "$f"
+          done
       - name: Apply Convert HMBIRD_OGKI to HMBIRD_GKI
         if: ${{ fromJSON(env.KV1) >= 6 && fromJSON(env.KV2) >= 66 && github.event.inputs.SCHED_HMBIRD == 'false' }}
         run: |
