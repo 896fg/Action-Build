@@ -760,6 +760,21 @@ jobs:
             echo "修复 SukiSU sulog 在当前 GKI 源码上的 user_arg_ptr 编译兼容问题"
             sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
           fi
+          if [ -f kernel/feature/selinux_hide.c ]; then
+            echo "导出 SUSFS 需要引用的 SukiSU SELinux helper"
+            sed -i 's/^static bool ksu_selinux_hide_running/bool ksu_selinux_hide_running/' kernel/feature/selinux_hide.c
+            sed -i 's/^static int security_context_to_sid_with_policy/int security_context_to_sid_with_policy/' kernel/feature/selinux_hide.c
+            sed -i 's/^static int security_sid_to_context_with_policy/int security_sid_to_context_with_policy/' kernel/feature/selinux_hide.c
+            sed -i 's/^static void __nocfi security_compute_av_user_with_policy/void __nocfi security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
+            sed -i 's/^static void security_compute_av_user_with_policy/void security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
+            grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || cat >> kernel/feature/selinux_hide.c <<'EOF'
+
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/jump_label.h>
+DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);
+#endif
+EOF
+          fi
 
           # 如果指定了手动 hash，就切换到该提交
           if [[ -n "$MANUAL_HASH" ]]; then
@@ -769,6 +784,20 @@ jobs:
             if [ -f kernel/sulog/event.c ]; then
               echo "修复手动 hash 对应源码的 user_arg_ptr 编译兼容问题"
               sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
+            fi
+            if [ -f kernel/feature/selinux_hide.c ]; then
+              sed -i 's/^static bool ksu_selinux_hide_running/bool ksu_selinux_hide_running/' kernel/feature/selinux_hide.c
+              sed -i 's/^static int security_context_to_sid_with_policy/int security_context_to_sid_with_policy/' kernel/feature/selinux_hide.c
+              sed -i 's/^static int security_sid_to_context_with_policy/int security_sid_to_context_with_policy/' kernel/feature/selinux_hide.c
+              sed -i 's/^static void __nocfi security_compute_av_user_with_policy/void __nocfi security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
+              sed -i 's/^static void security_compute_av_user_with_policy/void security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
+              grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || cat >> kernel/feature/selinux_hide.c <<'EOF'
+
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/jump_label.h>
+DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);
+#endif
+EOF
             fi
           fi
 
@@ -850,15 +879,6 @@ jobs:
             git clone https://github.com/Numbersf/lz4_oplus.git
           fi
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && [ -f susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ]; then
-            echo "正在应用 SukiSU/KernelSU 侧 SUSFS 配套补丁"
-            cd kernel_platform/KernelSU
-            patch -p1 -F 3 --batch --forward < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch || true
-            if [ -f kernel/sulog/event.c ]; then
-              sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
-            fi
-            cd ../..
-          fi
           cd kernel_platform
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "正在拉取susfs补丁"
