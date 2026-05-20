@@ -1522,6 +1522,12 @@ jobs:
           fi
 
           make O=out "${MAKE_ARGS[@]}" olddefconfig
+          echo ">> Patch SukiSU sulog USER_ARG_NULL if present"
+          for f in $(find "$GITHUB_WORKSPACE/kernel_workspace" -path "*/drivers/kernelsu/sulog/event.c" -type f); do
+            echo "Patching $f"
+            sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' "$f"
+            grep -n "KSU_SULOG_EVENT_IOCTL_GRANT_ROOT" "$f" || true
+          done
           make -j"$(nproc --all)" O=out "${MAKE_ARGS[@]}"
           ccache -s
 
