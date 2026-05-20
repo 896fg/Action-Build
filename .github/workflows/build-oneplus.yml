@@ -767,13 +767,7 @@ jobs:
             sed -i 's/^static int security_sid_to_context_with_policy/int security_sid_to_context_with_policy/' kernel/feature/selinux_hide.c
             sed -i 's/^static void __nocfi security_compute_av_user_with_policy/void __nocfi security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
             sed -i 's/^static void security_compute_av_user_with_policy/void security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
-            grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || cat >> kernel/feature/selinux_hide.c <<'EOF'
-
-#ifdef CONFIG_KSU_SUSFS
-#include <linux/jump_label.h>
-DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);
-#endif
-EOF
+            grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || printf '\n#ifdef CONFIG_KSU_SUSFS\n#include <linux/jump_label.h>\nDEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);\n#endif\n' >> kernel/feature/selinux_hide.c
           fi
 
           # 如果指定了手动 hash，就切换到该提交
@@ -791,13 +785,7 @@ EOF
               sed -i 's/^static int security_sid_to_context_with_policy/int security_sid_to_context_with_policy/' kernel/feature/selinux_hide.c
               sed -i 's/^static void __nocfi security_compute_av_user_with_policy/void __nocfi security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
               sed -i 's/^static void security_compute_av_user_with_policy/void security_compute_av_user_with_policy/' kernel/feature/selinux_hide.c
-              grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || cat >> kernel/feature/selinux_hide.c <<'EOF'
-
-#ifdef CONFIG_KSU_SUSFS
-#include <linux/jump_label.h>
-DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);
-#endif
-EOF
+              grep -q 'DEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled)' kernel/feature/selinux_hide.c || printf '\n#ifdef CONFIG_KSU_SUSFS\n#include <linux/jump_label.h>\nDEFINE_STATIC_KEY_TRUE(ksu_is_input_hook_enabled);\n#endif\n' >> kernel/feature/selinux_hide.c
             fi
           fi
 
