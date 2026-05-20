@@ -751,6 +751,10 @@ jobs:
 
           curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
           cd ./KernelSU
+          KSU_BUILD_FILE="kernel/Makefile"
+          if [ -f kernel/Kbuild ] && grep -q '^REPO_OWNER' kernel/Kbuild; then
+            KSU_BUILD_FILE="kernel/Kbuild"
+          fi
 
           if [ -f kernel/sulog/event.c ]; then
             echo "修复 SukiSU sulog 在当前 GKI 源码上的 user_arg_ptr 编译兼容问题"
@@ -793,8 +797,8 @@ jobs:
           ESC_VERSION_FULL=$(printf '%s' "$VERSION_FULL" | sed 's/[&|\\/]/\\&/g')
           ESC_KSU_VERSION_TAG=$(printf '%s' "$KSU_VERSION_TAG" | sed 's/[&|\\/]/\\&/g')
 
-          if grep -q '^KSU_VERSION_FULL := ' kernel/Makefile; then
-            sed -i "s|^KSU_VERSION_FULL := .*|KSU_VERSION_FULL := $ESC_VERSION_FULL|" kernel/Makefile
+          if grep -q '^KSU_VERSION_FULL := ' "$KSU_BUILD_FILE"; then
+            sed -i "s|^KSU_VERSION_FULL := .*|KSU_VERSION_FULL := $ESC_VERSION_FULL|" "$KSU_BUILD_FILE"
           else
             awk -v full="$VERSION_FULL" '
               /^REPO_OWNER :=/ && !done {
@@ -805,18 +809,18 @@ jobs:
                 next
               }
               { print }
-            ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
+            ' "$KSU_BUILD_FILE" > "$KSU_BUILD_FILE.tmp" && mv "$KSU_BUILD_FILE.tmp" "$KSU_BUILD_FILE"
           fi
 
-          if grep -q '^KSU_VERSION_API := ' kernel/Makefile; then
-            sed -i "s|^KSU_VERSION_API := .*|KSU_VERSION_API := $ESC_KSU_VERSION_TAG|" kernel/Makefile
+          if grep -q '^KSU_VERSION_API := ' "$KSU_BUILD_FILE"; then
+            sed -i "s|^KSU_VERSION_API := .*|KSU_VERSION_API := $ESC_KSU_VERSION_TAG|" "$KSU_BUILD_FILE"
           fi
 
           KSU_VERSION=$(expr $(git rev-list --count "$MANAGER_BRANCH" 2>/dev/null || echo 13000) + 37185)
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
 
           echo "::group::最终 Makefile 中版本信息及部分调试结果预览"
-          grep -nE '^(REPO_OWNER|REPO_NAME|REPO_BRANCH|KSU_VERSION_API|KSU_VERSION_FULL|VERSION_TAG|GIT_BIN|CURL_BIN)' kernel/Makefile
+          grep -nE '^(REPO_OWNER|REPO_NAME|REPO_BRANCH|KSU_VERSION_API|KSU_VERSION_FULL|VERSION_TAG|GIT_BIN|CURL_BIN)' "$KSU_BUILD_FILE" || true
           echo "::endgroup::"
 
       - name: Apply Patches SukiSU Ultra
@@ -846,6 +850,15 @@ jobs:
             git clone https://github.com/Numbersf/lz4_oplus.git
           fi
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
+          if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ] && [ -f susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ]; then
+            echo "正在应用 SukiSU/KernelSU 侧 SUSFS 配套补丁"
+            cd kernel_platform/KernelSU
+            patch -p1 -F 3 --batch --forward < ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch || true
+            if [ -f kernel/sulog/event.c ]; then
+              sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
+            fi
+            cd ../..
+          fi
           cd kernel_platform
           if [ "${{ github.event.inputs.SUSFS_META }}" != "-1" ]; then
             echo "正在拉取susfs补丁"
