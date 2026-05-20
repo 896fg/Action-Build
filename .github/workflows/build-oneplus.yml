@@ -1,4 +1,4 @@
-name: Build All OnePlus Kernels
+﻿name: Build All OnePlus Kernels
 on:
   workflow_dispatch:
     inputs:
@@ -752,11 +752,20 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/${MANAGER_BRANCH}/kernel/setup.sh" | bash -s "$BRANCH_NAME"
           cd ./KernelSU
 
+          if [ -f kernel/sulog/event.c ]; then
+            echo "修复 SukiSU sulog 在当前 GKI 源码上的 user_arg_ptr 编译兼容问题"
+            sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
+          fi
+
           # 如果指定了手动 hash，就切换到该提交
           if [[ -n "$MANUAL_HASH" ]]; then
             git fetch origin "$BRANCH_NAME" --depth=50
             git checkout "$MANUAL_HASH"
             SHORT_HASH=${MANUAL_HASH:0:8}
+            if [ -f kernel/sulog/event.c ]; then
+              echo "修复手动 hash 对应源码的 user_arg_ptr 编译兼容问题"
+              sed -i 's/USER_ARG_NULL, gfp)/\&USER_ARG_NULL, gfp)/g' kernel/sulog/event.c
+            fi
           fi
 
           KSU_VERSION_TAG=$(curl -fsSL https://api.github.com/repos/SukiSU-Ultra/SukiSU-Ultra/releases/latest \
